@@ -1,35 +1,82 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const session = require('express-session')
-const customer_routes = require('./router/auth_users.js').authenticated;
-const genl_routes = require('./router/general.js').general;
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const session = require('express-session');
+const rateLimit = require('express-rate-limit');
+
+const config = require('./config/config');
+const errorHandler = require('./middleware/errorHandler');
+const notFound = require('./middleware/notFound');
+
+// Import routes
+const authRoutes = require('./routes/authRoutes');
+const bookRoutes = require('./routes/bookRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 const app = express();
 
+// Security middleware
+app.use(helmet());
+app.use(cors(config.cors));
+
+// Body parser
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.use("/customer",session({secret:"fingerprint_customer",resave: true, saveUninitialized: true}));
+// Logging
+if (config.env === 'development') {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined'));
+}
 
-app.use("/customer/auth/*", function auth(req,res,next){
-    if (req.session.authorization) {
-        let token = req.session.authorization['accessToken'];
-
-        // Verify JWT token
-        jwt.verify(token, "access", (err, user) => {
-            if (!err) {
-                req.user = user;
-                next(); // Proceed to the next middleware
-            } else {
-                return res.status(403).json({ message: "User not authenticated" });
-            }
-        });
-    } else {
-        return res.status(403).json({ message: "User not logged in" });
-    }
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.max,
+  message: {
+    success: false,
+    message: 'Too many requests from this IP, please try again later.',
+  },
 });
-const PORT =5000;
+app.use('/api/', limiter);
 
-app.use("/customer", customer_routes);
-app.use("/", genl_routes);
+// Session middleware
+app.use(
+  '/api/customer',
+  session({
+    secret: config.session.secret,
+    resave: config.session.resave,
+    saveUninitialized: config.session.saveUninitialized,
+    cookie: config.session.cookie,
+  })
+);
 
-app.listen(PORT,()=>console.log("Server is running"));
+// Routes
+app.use('/api/customer', authRoutes);
+app.use('/api', bookRoutes);
+app.use('/api/customer/auth', reviewRoutes);
+
+// Health check
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// 404 handler
+app.use(notFound);
+
+// Error handler (must be last)
+app.use(errorHandler);
+
+// Start server
+const PORT = config.port;
+app.listen(PORT, () => {
+  console.log(`Server running in ${config.env} mode on port ${PORT}`);
+});
+
+module.exports = app;
