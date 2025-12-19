@@ -1,19 +1,19 @@
 # Book Reviews API
 
-A production-ready RESTful API for managing book reviews with JWT authentication, built with Node.js and Express.js.
+A RESTful API for managing book reviews with JWT authentication, PostgreSQL database, and Docker support.
 
 ## 🚀 Features
 
+- ✅ **Docker Compose** - One command to run everything
+- ✅ **PostgreSQL Database** with Sequelize ORM
+- ✅ **Hot Reload** - Auto-restart on code changes
+- ✅ **Database Seeding** - Sample data included
 - ✅ JWT-based authentication
 - ✅ Password hashing with bcrypt
-- ✅ Input validation with express-validator
-- ✅ Rate limiting
-- ✅ Security headers (Helmet)
+- ✅ Input validation
+- ✅ Rate limiting & security headers
 - ✅ CORS support
-- ✅ Error handling middleware
-- ✅ Request logging (Morgan)
-- ✅ Environment-based configuration
-- ✅ Clean architecture (MVC pattern)
+- ✅ Clean MVC architecture
 
 ## 📁 Project Structure
 
@@ -55,36 +55,80 @@ final_project/
 └── .gitignore           # Git ignore rules
 ```
 
-## 🛠️ Installation
+## 🛠️ Quick Start
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd expressBookReviews/final_project
-   ```
+### Prerequisites
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed
+- That's it! No need to install Node.js, PostgreSQL, or anything else
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` and update the values:
-   - `JWT_SECRET` - Strong secret for JWT tokens
-   - `SESSION_SECRET` - Strong secret for sessions
-   - `PORT` - Server port (default: 5000)
+### Start the Application
 
-4. **Start the server**
-   ```bash
-   # Development mode (with auto-reload)
-   npm run dev
+```bash
+# Clone the repository
+git clone <repository-url>
+cd expressBookReviews/final_project
 
-   # Production mode
-   npm start
-   ```
+# Start everything with Docker Compose
+docker-compose up
+
+# That's it! 🎉
+```
+
+The API is now running at **http://localhost:5000**
+
+**What just happened?**
+- ✅ PostgreSQL database started
+- ✅ Database tables created
+- ✅ Sample books seeded
+- ✅ API server running with hot reload
+
+### Stop the Application
+
+```bash
+# Stop containers (keeps data)
+docker-compose down
+
+# Stop and remove all data
+docker-compose down -v
+```
+
+### View Logs
+
+```bash
+# View all logs
+docker-compose logs -f
+
+# View only API logs
+docker-compose logs -f api
+```
+
+## 🧪 Test the API
+
+```bash
+# Health check
+curl http://localhost:5000/health
+
+# Get all books
+curl http://localhost:5000/api/books
+
+# Register a user
+curl -X POST http://localhost:5000/api/customer/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "alice", "password": "password123"}'
+
+# Login
+curl -X POST http://localhost:5000/api/customer/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "alice", "password": "password123"}' \
+  -c cookies.txt
+
+# Add a review (requires login)
+curl -X PUT http://localhost:5000/api/customer/auth/review/1 \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{"review": "Great book!"}'
+```
 
 ## 📡 API Endpoints
 
@@ -139,44 +183,107 @@ final_project/
 - **Input Validation**: All inputs are validated and sanitized
 - **Session Security**: Secure, httpOnly cookies in production
 
-## 🧪 Testing with Postman
+## 💻 Local Development
 
-1. **Register a user**
-   ```
-   POST http://localhost:5000/api/customer/register
-   Body: { "username": "alice", "password": "password123" }
-   ```
+### Making Code Changes
 
-2. **Login**
-   ```
-   POST http://localhost:5000/api/customer/login
-   Body: { "username": "alice", "password": "password123" }
-   ```
-   Note: Session cookie is automatically saved
+The application uses **hot reload** - any code changes automatically restart the server!
 
-3. **Browse books**
+1. Edit files in your IDE
+2. Save the file
+3. Watch the terminal - you'll see:
    ```
-   GET http://localhost:5000/api/books
+   bookreviews-api  | [nodemon] restarting due to changes...
+   bookreviews-api  | [nodemon] starting `node index.js`
    ```
+4. Test your changes immediately!
 
-4. **Add review** (requires login)
-   ```
-   PUT http://localhost:5000/api/customer/auth/review/1
-   Body: { "review": "Great book!" }
-   ```
+### Access the Database
 
-## 📝 Environment Variables
+```bash
+# Connect to PostgreSQL
+docker-compose exec postgres psql -U postgres -d bookreviews
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment (development/production) | development |
-| `PORT` | Server port | 5000 |
-| `JWT_SECRET` | Secret for JWT tokens | access |
-| `JWT_EXPIRES_IN` | Token expiration time | 1h |
-| `SESSION_SECRET` | Secret for sessions | fingerprint_customer |
-| `CORS_ORIGIN` | Allowed CORS origin | * |
-| `RATE_LIMIT_WINDOW_MS` | Rate limit window | 900000 (15 min) |
-| `RATE_LIMIT_MAX_REQUESTS` | Max requests per window | 100 |
+# View tables
+\dt
+
+# View books
+SELECT * FROM books;
+
+# View users
+SELECT id, username, created_at FROM users;
+
+# Exit
+\q
+```
+
+### Useful Commands
+
+```bash
+# Restart the API (picks up environment changes)
+docker-compose restart api
+
+# Rebuild after dependency changes
+docker-compose up --build
+
+# View container status
+docker-compose ps
+
+# Execute command in container
+docker-compose exec api npm run db:seed
+
+# Clean restart
+docker-compose down -v && docker-compose up
+```
+
+## 🗄️ Database Management
+
+### Seed Data
+
+```bash
+# Seed sample books
+docker-compose exec api npm run db:seed
+
+# Clear all books and re-seed
+docker-compose exec api npm run db:seed:force
+
+# Clear books only
+docker-compose exec api npm run db:clear
+```
+
+### Reset Database
+
+```bash
+# Complete reset (removes all data)
+docker-compose down -v
+docker-compose up
+
+# Or manually
+docker-compose exec postgres psql -U postgres -d bookreviews -c "TRUNCATE books, users, reviews CASCADE;"
+```
+
+### Database Credentials (Docker)
+
+When running with Docker Compose, these are pre-configured:
+- **Host**: postgres (container name)
+- **Port**: 5432
+- **Database**: bookreviews
+- **User**: postgres
+- **Password**: postgres
+
+## 📝 NPM Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm start` | Start server (production) |
+| `npm run dev` | Start with auto-reload (development) |
+| `npm run db:migrate` | Create database tables |
+| `npm run db:seed` | Seed sample books |
+| `npm run db:seed:force` | Clear and re-seed |
+| `npm run db:clear` | Clear all books |
+| `npm run docker:up` | Start Docker Compose |
+| `npm run docker:down` | Stop Docker Compose |
+| `npm run docker:logs` | View Docker logs |
 
 ## 🏗️ Architecture
 
@@ -201,99 +308,90 @@ The old routes are still functional but deprecated:
 - Old: `/books/` → New: `/api/books`
 - Old: `/isbn/:isbn` → New: `/api/isbn/:isbn`
 
-## 🚀 Production Deployment
+## 📚 Additional Documentation
 
-### Prerequisites
-- Node.js 14+ installed
-- PostgreSQL database (optional, for production)
-- PM2 or similar process manager
+- **[DOCKER_QUICKSTART.md](DOCKER_QUICKSTART.md)** - Quick Docker reference
+- **[DOCKER_GUIDE.md](DOCKER_GUIDE.md)** - Complete Docker guide with production deployment
+- **[SEEDING_GUIDE.md](SEEDING_GUIDE.md)** - How to add and manage seed data
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Production deployment guide
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Technical implementation details
 
-### Steps
+## 🐛 Troubleshooting
 
-1. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` and set:
-   - `NODE_ENV=production`
-   - Strong `JWT_SECRET` (use a secure random string)
-   - Strong `SESSION_SECRET` (use a secure random string)
-   - `CORS_ORIGIN` to your frontend domain (e.g., `https://yourdomain.com`)
-   - Database credentials if using PostgreSQL
+### Port Already in Use
 
-2. **Install dependencies**
-   ```bash
-   npm install --production
-   ```
+```bash
+# Change ports in docker-compose.yml
+services:
+  api:
+    ports:
+      - "3000:5000"  # Use port 3000 instead
+```
 
-3. **Set up database (optional)**
-   ```bash
-   # Create database
-   createdb bookreviews
-   
-   # Run migrations
-   node config/migrate.js
-   ```
+### Database Connection Error
 
-4. **Use a process manager (PM2)**
-   ```bash
-   npm install -g pm2
-   pm2 start index.js --name bookreviews-api
-   pm2 save
-   pm2 startup
-   ```
+```bash
+# Check if containers are running
+docker-compose ps
 
-5. **Set up reverse proxy (Nginx)**
-   ```nginx
-   server {
-       listen 80;
-       server_name yourdomain.com;
-       
-       location / {
-           proxy_pass http://localhost:5000;
-           proxy_http_version 1.1;
-           proxy_set_header Upgrade $http_upgrade;
-           proxy_set_header Connection 'upgrade';
-           proxy_set_header Host $host;
-           proxy_cache_bypass $http_upgrade;
-       }
-   }
-   ```
+# Check logs
+docker-compose logs postgres
+docker-compose logs api
 
-6. **Enable HTTPS**
-   - Use Let's Encrypt with Certbot
-   - Configure SSL certificates in Nginx
+# Restart everything
+docker-compose restart
+```
 
-7. **Security checklist**
-   - ✅ Use strong secrets (minimum 32 characters)
-   - ✅ Set `secure: true` for cookies in production
-   - ✅ Configure CORS to specific origins
-   - ✅ Enable rate limiting
-   - ✅ Use HTTPS only
-   - ✅ Keep dependencies updated
-   - ✅ Set up monitoring and logging
-   - ⚠️ Replace in-memory storage with database for production
+### Can't See Code Changes
 
-### Production Considerations
+```bash
+# Rebuild containers
+docker-compose up --build
 
-- **Database**: Currently uses in-memory storage. For production, migrate to PostgreSQL using the provided schema and migration scripts.
-- **Logging**: Consider using a logging service (Winston, Pino) or cloud logging (CloudWatch, Datadog)
-- **Monitoring**: Set up health checks and monitoring (PM2 monitoring, New Relic, etc.)
-- **Backup**: Regular database backups if using PostgreSQL
-- **Scaling**: Consider using a load balancer for multiple instances
+# Or restart API only
+docker-compose restart api
+```
 
-## 📦 Dependencies
+### Reset Everything
 
-- **express** - Web framework
-- **jsonwebtoken** - JWT authentication
-- **bcrypt** - Password hashing
-- **express-validator** - Input validation
-- **helmet** - Security headers
-- **cors** - CORS support
-- **express-rate-limit** - Rate limiting
-- **morgan** - HTTP request logger
-- **dotenv** - Environment variables
-- **express-session** - Session management
+```bash
+# Complete reset
+docker-compose down -v
+docker-compose up --build
+```
+
+## 🏗️ Project Structure
+
+```
+final_project/
+├── config/
+│   ├── config.js           # App configuration
+│   ├── sequelize.js        # Database connection
+│   ├── migrate.js          # Database migrations
+│   ├── seed.js             # Database seeding
+│   └── clear-books.js      # Clear database
+├── src/
+│   ├── controllers/        # Business logic
+│   ├── middleware/         # Auth, error handling
+│   ├── models/             # Sequelize models
+│   ├── routes/             # API routes
+│   ├── utils/              # Helper functions
+│   └── validators/         # Input validation
+├── docker-compose.yml      # Docker services config
+├── Dockerfile              # Docker image config
+├── index.js                # Server entry point
+└── package.json            # Dependencies
+```
+
+## 🔧 Tech Stack
+
+- **Runtime**: Node.js with Express
+- **Database**: PostgreSQL with Sequelize ORM
+- **Authentication**: JWT + Session-based
+- **Security**: Helmet, bcrypt, rate limiting
+- **Validation**: express-validator
+- **Containerization**: Docker & Docker Compose
+- **Development**: Nodemon (hot reload)
 
 ## 📄 License
 
@@ -305,13 +403,39 @@ Your Name
 
 ---
 
-**Note**: This is a production-ready structure. For actual production deployment, consider:
-- Database integration (MongoDB, PostgreSQL, etc.)
-- Redis for session storage
-- Proper logging service
-- Monitoring and alerting
-- CI/CD pipeline
-- API documentation (Swagger/OpenAPI)
+## ⚡ Features & Benefits
+
+### Development Experience
+- ✅ **One-command setup** - `docker-compose up` and you're ready
+- ✅ **Hot reload** - Changes reflect instantly
+- ✅ **No local setup** - Everything runs in containers
+- ✅ **Sample data** - Pre-seeded books for testing
+- ✅ **Easy cleanup** - Remove everything with one command
+
+### Production Ready
+- ✅ **PostgreSQL** - Enterprise-grade database
+- ✅ **Sequelize ORM** - Type-safe database queries
+- ✅ **Connection pooling** - Handles concurrent requests
+- ✅ **Security** - Password hashing, rate limiting, CORS
+- ✅ **Error handling** - Comprehensive error messages
+- ✅ **Logging** - Request and query logging
+
+### Architecture
+- ✅ **MVC Pattern** - Organized code structure
+- ✅ **RESTful API** - Standard HTTP methods
+- ✅ **JWT Auth** - Stateless authentication
+- ✅ **Input validation** - Server-side validation
+- ✅ **Docker ready** - Easy deployment anywhere
+
+## 📄 License
+
+MIT
+
+---
+
+**Happy Coding!** 🚀
+
+For questions or issues, check the documentation or review the code comments.
 
 
 

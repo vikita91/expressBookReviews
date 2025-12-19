@@ -6,7 +6,15 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db:migrate": "node config/migrate.js",
+    "db:seed": "node config/seed.js",
+    "db:seed:force": "node config/clear-books.js && node config/seed.js",
+    "db:clear": "node config/clear-books.js",
+    "docker:up": "docker-compose up",
+    "docker:up:build": "docker-compose up --build",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
   },
   "keywords": ["express", "api", "books", "reviews", "jwt"],
   "author": "",
@@ -22,7 +30,10 @@
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^8.5.1",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "pg": "^8.16.3",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.19"

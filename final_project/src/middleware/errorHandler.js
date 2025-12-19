@@ -4,22 +4,58 @@ const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log error
-  console.error('Error:', err);
-
-  // PostgreSQL duplicate key error
-  if (err.code === '23505') {
-    const message = 'Duplicate field value entered';
-    error = { message, statusCode: 400 };
+  // Log error (in production, use proper logging service)
+  if (config.env === 'development') {
+    console.error('Error:', err);
+  } else {
+    console.error('Error:', err.message);
   }
 
-  // PostgreSQL foreign key violation
+  // Sequelize Validation Error
+  if (err.name === 'SequelizeValidationError') {
+    const messages = err.errors.map(e => e.message);
+    error = { message: messages.join(', '), statusCode: 400 };
+  }
+
+  // Sequelize Unique Constraint Error
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    const field = err.errors[0]?.path || 'field';
+    error = { message: `${field} already exists`, statusCode: 409 };
+  }
+
+  // Sequelize Foreign Key Constraint Error
+  if (err.name === 'SequelizeForeignKeyConstraintError') {
+    error = { message: 'Referenced resource not found', statusCode: 404 };
+  }
+
+  // Sequelize Database Error
+  if (err.name === 'SequelizeDatabaseError') {
+    error = { message: 'Database error occurred', statusCode: 500 };
+  }
+
+  // Sequelize Connection Error
+  if (err.name === 'SequelizeConnectionError') {
+    error = { message: 'Database connection error', statusCode: 503 };
+  }
+
+  // Sequelize Timeout Error
+  if (err.name === 'SequelizeConnectionTimedOutError') {
+    error = { message: 'Database connection timeout', statusCode: 503 };
+  }
+
+  // PostgreSQL duplicate key error (raw)
+  if (err.code === '23505') {
+    const message = 'Duplicate field value entered';
+    error = { message, statusCode: 409 };
+  }
+
+  // PostgreSQL foreign key violation (raw)
   if (err.code === '23503') {
     const message = 'Referenced resource not found';
     error = { message, statusCode: 404 };
   }
 
-  // PostgreSQL not null violation
+  // PostgreSQL not null violation (raw)
   if (err.code === '23502') {
     const message = 'Required field is missing';
     error = { message, statusCode: 400 };

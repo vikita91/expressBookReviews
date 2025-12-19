@@ -1,13 +1,13 @@
 let books = {
-      1: {"author": "Vikita","title": "Lob", "reviews": {} },
-      2: {"author": "Vikita2","title": "Lob 2.0", "reviews": {} },
-      3: {"author": "Vikita3","title": "Lob 3.0, Lob 3.0.1", "reviews": {} },
-      4: {"author": "Vikita4","title": "Lob 4.0", "reviews": {} },
-      5: {"author": "Vikita5","title": "Lob 5.0", "reviews": {} },
-      6: {"author": "Vikita6","title": "Lob 6.0", "reviews": {} },
-      7: {"author": "vikita7","title": "Lob 7.0", "reviews": {} },
-      8: {"author": "Vikita8","title": "Lob 8.0", "reviews": {} },
-      9: {"author": "Vikita9","title": "Lob 9.0", "reviews": {} },
-      10: {"author": "Vikita10","title": "Lob 10.0", "reviews": {} }
+      1: {"author": "Chinua Achebe","title": "Things Fall Apart", "reviews": {} },
+      2: {"author": "Hans Christian Andersen","title": "Fairy tales", "reviews": {} },
+      3: {"author": "Dante Alighieri","title": "The Divine Comedy", "reviews": {} },
+      4: {"author": "Unknown","title": "The Epic Of Gilgamesh", "reviews": {} },
+      5: {"author": "Unknown","title": "The Book Of Job", "reviews": {} },
+      6: {"author": "Unknown","title": "One Thousand and One Nights", "reviews": {} },
+      7: {"author": "Unknown","title": "Nj\u00e1l's Saga", "reviews": {} },
+      8: {"author": "Jane Austen","title": "Pride and Prejudice", "reviews": {} },
+      9: {"author": "Honor\u00e9 de Balzac","title": "Le P\u00e8re Goriot", "reviews": {} },
+      10: {"author": "Samuel Beckett","title": "Molloy, Malone Dies, The Unnamable, the trilogy", "reviews": {} }
 }
 module.exports=books;
