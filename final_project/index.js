@@ -6,13 +6,13 @@ const session = require('express-session');
 const rateLimit = require('express-rate-limit');
 
 const config = require('./config/config');
-const errorHandler = require('./middleware/errorHandler');
-const notFound = require('./middleware/notFound');
+const errorHandler = require('./src/middleware/errorHandler');
+const notFound = require('./src/middleware/notFound');
 
 // Import routes
-const authRoutes = require('./routes/authRoutes');
-const bookRoutes = require('./routes/bookRoutes');
-const reviewRoutes = require('./routes/reviewRoutes');
+const authRoutes = require('./src/routes/authRoutes');
+const bookRoutes = require('./src/routes/bookRoutes');
+const reviewRoutes = require('./src/routes/reviewRoutes');
 
 const app = express();
 

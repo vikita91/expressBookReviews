@@ -1,4 +1,4 @@
-const config = require('../config/config');
+const config = require('../../config/config');
 
 const errorHandler = (err, req, res, next) => {
   let error = { ...err };
@@ -7,21 +7,21 @@ const errorHandler = (err, req, res, next) => {
   // Log error
   console.error('Error:', err);
 
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    const message = 'Resource not found';
-    error = { message, statusCode: 404 };
-  }
-
-  // Mongoose duplicate key
-  if (err.code === 11000) {
+  // PostgreSQL duplicate key error
+  if (err.code === '23505') {
     const message = 'Duplicate field value entered';
     error = { message, statusCode: 400 };
   }
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const message = Object.values(err.errors).map(val => val.message).join(', ');
+  // PostgreSQL foreign key violation
+  if (err.code === '23503') {
+    const message = 'Referenced resource not found';
+    error = { message, statusCode: 404 };
+  }
+
+  // PostgreSQL not null violation
+  if (err.code === '23502') {
+    const message = 'Required field is missing';
     error = { message, statusCode: 400 };
   }
 
@@ -34,6 +34,12 @@ const errorHandler = (err, req, res, next) => {
   if (err.name === 'TokenExpiredError') {
     const message = 'Token expired';
     error = { message, statusCode: 401 };
+  }
+
+  // Validation errors from express-validator
+  if (err.array && typeof err.array === 'function') {
+    const message = err.array().map(e => e.msg).join(', ');
+    error = { message, statusCode: 400 };
   }
 
   res.status(error.statusCode || 500).json({

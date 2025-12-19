@@ -1,4 +1,4 @@
-const books = require('../router/booksdb');
+const books = require('../../router/booksdb');
 
 class Book {
   async findAll() {

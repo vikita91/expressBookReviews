@@ -19,33 +19,40 @@ A production-ready RESTful API for managing book reviews with JWT authentication
 
 ```
 final_project/
-├── config/           # Configuration files
-│   └── config.js     # App configuration
-├── controllers/      # Route controllers
-│   ├── authController.js
-│   ├── bookController.js
-│   └── reviewController.js
-├── middleware/       # Custom middleware
-│   ├── auth.js       # Authentication middleware
-│   ├── errorHandler.js
-│   └── notFound.js
-├── models/           # Data models/services
-│   ├── User.js
-│   └── Book.js
-├── routes/           # Route definitions
-│   ├── authRoutes.js
-│   ├── bookRoutes.js
-│   └── reviewRoutes.js
-├── utils/            # Utility functions
-│   └── jwt.js        # JWT helpers
-├── validators/       # Input validation
-│   ├── authValidator.js
-│   └── reviewValidator.js
-├── router/           # Legacy (booksdb.js)
-│   └── booksdb.js
-├── index.js          # Server entry point
+├── config/              # Configuration files
+│   ├── config.js        # App configuration
+│   ├── database.js      # PostgreSQL database connection
+│   ├── migrate.js       # Database migration script
+│   └── schema.sql       # Database schema
+├── src/                  # Source code
+│   ├── controllers/     # Route controllers (business logic)
+│   │   ├── authController.js
+│   │   ├── bookController.js
+│   │   └── reviewController.js
+│   ├── middleware/      # Custom middleware
+│   │   ├── auth.js      # Authentication middleware
+│   │   ├── errorHandler.js  # Global error handler
+│   │   └── notFound.js  # 404 handler
+│   ├── models/          # Data models/services
+│   │   ├── User.js      # User model (currently in-memory)
+│   │   └── Book.js      # Book model (currently in-memory)
+│   ├── routes/          # Route definitions
+│   │   ├── authRoutes.js
+│   │   ├── bookRoutes.js
+│   │   └── reviewRoutes.js
+│   ├── utils/           # Utility functions
+│   │   └── jwt.js       # JWT helpers
+│   └── validators/      # Input validation
+│       ├── authValidator.js
+│       └── reviewValidator.js
+├── router/              # Legacy router files
+│   ├── auth_users.js    # Legacy auth (deprecated)
+│   ├── booksdb.js       # In-memory book database
+│   └── general.js       # Legacy routes (deprecated)
+├── index.js             # Server entry point
 ├── package.json
-└── .env.example      # Environment variables template
+├── .env.example         # Environment variables template
+└── .gitignore           # Git ignore rules
 ```
 
 ## 🛠️ Installation
@@ -196,13 +203,84 @@ The old routes are still functional but deprecated:
 
 ## 🚀 Production Deployment
 
-1. Set `NODE_ENV=production` in `.env`
-2. Use strong secrets for `JWT_SECRET` and `SESSION_SECRET`
-3. Configure `CORS_ORIGIN` to your frontend domain
-4. Use a process manager like PM2
-5. Set up proper logging
-6. Use HTTPS in production
-7. Replace in-memory storage with a database
+### Prerequisites
+- Node.js 14+ installed
+- PostgreSQL database (optional, for production)
+- PM2 or similar process manager
+
+### Steps
+
+1. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` and set:
+   - `NODE_ENV=production`
+   - Strong `JWT_SECRET` (use a secure random string)
+   - Strong `SESSION_SECRET` (use a secure random string)
+   - `CORS_ORIGIN` to your frontend domain (e.g., `https://yourdomain.com`)
+   - Database credentials if using PostgreSQL
+
+2. **Install dependencies**
+   ```bash
+   npm install --production
+   ```
+
+3. **Set up database (optional)**
+   ```bash
+   # Create database
+   createdb bookreviews
+   
+   # Run migrations
+   node config/migrate.js
+   ```
+
+4. **Use a process manager (PM2)**
+   ```bash
+   npm install -g pm2
+   pm2 start index.js --name bookreviews-api
+   pm2 save
+   pm2 startup
+   ```
+
+5. **Set up reverse proxy (Nginx)**
+   ```nginx
+   server {
+       listen 80;
+       server_name yourdomain.com;
+       
+       location / {
+           proxy_pass http://localhost:5000;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host $host;
+           proxy_cache_bypass $http_upgrade;
+       }
+   }
+   ```
+
+6. **Enable HTTPS**
+   - Use Let's Encrypt with Certbot
+   - Configure SSL certificates in Nginx
+
+7. **Security checklist**
+   - ✅ Use strong secrets (minimum 32 characters)
+   - ✅ Set `secure: true` for cookies in production
+   - ✅ Configure CORS to specific origins
+   - ✅ Enable rate limiting
+   - ✅ Use HTTPS only
+   - ✅ Keep dependencies updated
+   - ✅ Set up monitoring and logging
+   - ⚠️ Replace in-memory storage with database for production
+
+### Production Considerations
+
+- **Database**: Currently uses in-memory storage. For production, migrate to PostgreSQL using the provided schema and migration scripts.
+- **Logging**: Consider using a logging service (Winston, Pino) or cloud logging (CloudWatch, Datadog)
+- **Monitoring**: Set up health checks and monitoring (PM2 monitoring, New Relic, etc.)
+- **Backup**: Regular database backups if using PostgreSQL
+- **Scaling**: Consider using a load balancer for multiple instances
 
 ## 📦 Dependencies
 
