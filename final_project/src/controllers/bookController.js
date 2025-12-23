@@ -82,7 +82,7 @@ const getReviews = async (req, res, next) => {
     const reviews = await Book.getReviews(isbn);
     res.status(200).json({
       success: true,
-      count: Object.keys(reviews).length,
+      count: Array.isArray(reviews) ? reviews.length : 0,
       data: reviews,
     });
   } catch (error) {

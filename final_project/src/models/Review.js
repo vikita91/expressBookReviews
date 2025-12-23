@@ -1,5 +1,5 @@
 const { DataTypes, Model } = require('sequelize');
-const { sequelize } = require('../../config/sequelize');
+const { sequelize } = require('../config/sequelize');
 
 class Review extends Model {}
 
@@ -52,10 +52,11 @@ Review.init(
       { fields: ['book_id'] },
       { fields: ['user_id'] },
       { fields: ['username'] },
-      { unique: true, fields: ['book_id', 'username'] },
     ],
   }
 );
 
 module.exports = Review;
+
+
 

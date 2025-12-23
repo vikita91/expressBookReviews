@@ -1,4 +1,4 @@
-const { sequelize, Book } = require('../src/models');
+const { sequelize, Book } = require('../models');
 
 const clearBooks = async () => {
   try {

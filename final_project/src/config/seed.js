@@ -1,9 +1,16 @@
-const { sequelize, Book, User } = require('../src/models');
+const { sequelize, Book, User } = require('../models');
 const { Model } = require('sequelize');
-const booksData = require('../router/booksdb');
+const booksData = require('../../scripts/booksdb');
 
 const seedDatabase = async () => {
   try {
+    // Skip seeding in production unless explicitly enabled
+    if (process.env.NODE_ENV === 'production' && !process.env.ENABLE_SEEDING) {
+      console.log('⚠️  Skipping seeding in production mode.');
+      console.log('   Set ENABLE_SEEDING=true to enable seeding in production.');
+      process.exit(0);
+    }
+
     console.log('Starting database seeding...');
     
     // Test connection

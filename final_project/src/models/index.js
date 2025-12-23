@@ -1,4 +1,4 @@
-const { sequelize } = require('../../config/sequelize');
+const { sequelize } = require('../config/sequelize');
 const User = require('./User');
 const Book = require('./Book');
 const Review = require('./Review');
@@ -44,4 +44,6 @@ module.exports = {
   Review,
   syncDatabase,
 };
+
+
 

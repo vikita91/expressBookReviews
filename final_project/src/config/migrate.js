@@ -1,4 +1,4 @@
-const { sequelize, syncDatabase } = require('../src/models');
+const { sequelize, syncDatabase } = require('../models');
 
 const runMigration = async () => {
   try {
@@ -26,3 +26,4 @@ if (require.main === module) {
 }
 
 module.exports = runMigration;
+

@@ -1,5 +1,5 @@
 const { DataTypes, Model } = require('sequelize');
-const { sequelize } = require('../../config/sequelize');
+const { sequelize } = require('../config/sequelize');
 
 class Book extends Model {}
 
@@ -73,115 +73,185 @@ const _findOneBook = async function (options) {
 
 // Static methods for compatibility with existing controllers
 Book.findAll = async function () {
-  const books = await _findAllBooks();
-  
-  // Convert to object format with ISBN as key (for backward compatibility)
-  const booksObj = {};
-  books.forEach(book => {
-    const reviews = {};
-    if (book.reviews) {
-      book.reviews.forEach(review => {
-        reviews[review.username] = review.review;
+  try {
+    // Get all books using raw SQL
+    const books = await sequelize.query(
+      'SELECT id, isbn, title, author FROM books ORDER BY id',
+      {
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+    
+    // Get all reviews with full details
+    const allReviews = await sequelize.query(
+      'SELECT id, book_id, username, review, created_at FROM reviews ORDER BY created_at DESC',
+      {
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+    
+    // Group reviews by book_id as arrays
+    const reviewsByBookId = {};
+    allReviews.forEach(review => {
+      if (!reviewsByBookId[review.book_id]) {
+        reviewsByBookId[review.book_id] = [];
+      }
+      reviewsByBookId[review.book_id].push({
+        id: review.id,
+        username: review.username,
+        review: review.review,
+        created_at: review.created_at,
       });
-    }
-    booksObj[book.isbn] = {
-      author: book.author,
-      title: book.title,
-      reviews: reviews,
-    };
-  });
-  
-  return booksObj;
+    });
+    
+    // Convert to object format with ISBN as key (for backward compatibility)
+    const booksObj = {};
+    books.forEach(book => {
+      booksObj[book.isbn] = {
+        author: book.author,
+        title: book.title,
+        reviews: reviewsByBookId[book.id] || [],
+      };
+    });
+    
+    return booksObj;
+  } catch (error) {
+    throw error;
+  }
 };
 
 Book.findByIsbn = async function (isbn) {
-  const book = await _findOneBook({
-    where: { isbn },
-    include: [
+  try {
+    // Find book using raw SQL
+    const book = await sequelize.query(
+      'SELECT id, isbn, title, author FROM books WHERE isbn = :isbn',
       {
-        association: 'reviews',
-        attributes: ['username', 'review'],
-      },
-    ],
-  });
-  
-  if (!book) {
-    throw new Error('Book not found');
+        replacements: { isbn },
+        type: sequelize.QueryTypes.SELECT,
+        plain: true,
+      }
+    );
+    
+    if (!book) {
+      throw new Error('Book not found');
+    }
+    
+    // Get reviews for this book
+    const reviews = await sequelize.query(
+      'SELECT id, username, review, created_at FROM reviews WHERE book_id = :book_id ORDER BY created_at DESC',
+      {
+        replacements: { book_id: book.id },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+    
+    const reviewsArray = reviews.map(review => ({
+      id: review.id,
+      username: review.username,
+      review: review.review,
+      created_at: review.created_at,
+    }));
+    
+    return {
+      isbn: book.isbn,
+      author: book.author,
+      title: book.title,
+      reviews: reviewsArray,
+    };
+  } catch (error) {
+    if (error.message === 'Book not found') {
+      throw error;
+    }
+    throw error;
   }
-  
-  const reviews = {};
-  if (book.reviews) {
-    book.reviews.forEach(review => {
-      reviews[review.username] = review.review;
-    });
-  }
-  
-  return {
-    isbn: book.isbn,
-    author: book.author,
-    title: book.title,
-    reviews: reviews,
-  };
 };
 
 Book.findByAuthor = async function (author) {
-  const books = await Model.findAll.call(Book, {
-    where: sequelize.where(
-      sequelize.fn('LOWER', sequelize.col('author')),
-      sequelize.fn('LOWER', author)
-    ),
-    include: [
+  try {
+    // Find books by author using raw SQL
+    const books = await sequelize.query(
+      'SELECT id, isbn, title, author FROM books WHERE LOWER(author) = LOWER(:author)',
       {
-        association: 'reviews',
-        attributes: ['username', 'review'],
-      },
-    ],
-  });
-  
-  return books.map(book => {
-    const reviews = {};
-    if (book.reviews) {
-      book.reviews.forEach(review => {
-        reviews[review.username] = review.review;
-      });
-    }
-    return {
-      isbn: book.isbn,
-      author: book.author,
-      title: book.title,
-      reviews: reviews,
-    };
-  });
+        replacements: { author },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+    
+    // Get reviews for each book
+    const booksWithReviews = await Promise.all(
+      books.map(async (book) => {
+        const reviews = await sequelize.query(
+          'SELECT id, username, review, created_at FROM reviews WHERE book_id = :book_id ORDER BY created_at DESC',
+          {
+            replacements: { book_id: book.id },
+            type: sequelize.QueryTypes.SELECT,
+          }
+        );
+        
+        const reviewsArray = reviews.map(review => ({
+          id: review.id,
+          username: review.username,
+          review: review.review,
+          created_at: review.created_at,
+        }));
+        
+        return {
+          isbn: book.isbn,
+          author: book.author,
+          title: book.title,
+          reviews: reviewsArray,
+        };
+      })
+    );
+    
+    return booksWithReviews;
+  } catch (error) {
+    throw error;
+  }
 };
 
 Book.findByTitle = async function (title) {
-  const books = await Model.findAll.call(Book, {
-    where: sequelize.where(
-      sequelize.fn('LOWER', sequelize.col('title')),
-      sequelize.fn('LOWER', title)
-    ),
-    include: [
+  try {
+    // Find books by title using raw SQL
+    const books = await sequelize.query(
+      'SELECT id, isbn, title, author FROM books WHERE LOWER(title) = LOWER(:title)',
       {
-        association: 'reviews',
-        attributes: ['username', 'review'],
-      },
-    ],
-  });
-  
-  return books.map(book => {
-    const reviews = {};
-    if (book.reviews) {
-      book.reviews.forEach(review => {
-        reviews[review.username] = review.review;
-      });
-    }
-    return {
-      isbn: book.isbn,
-      author: book.author,
-      title: book.title,
-      reviews: reviews,
-    };
-  });
+        replacements: { title },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+    
+    // Get reviews for each book
+    const booksWithReviews = await Promise.all(
+      books.map(async (book) => {
+        const reviews = await sequelize.query(
+          'SELECT id, username, review, created_at FROM reviews WHERE book_id = :book_id ORDER BY created_at DESC',
+          {
+            replacements: { book_id: book.id },
+            type: sequelize.QueryTypes.SELECT,
+          }
+        );
+        
+        const reviewsArray = reviews.map(review => ({
+          id: review.id,
+          username: review.username,
+          review: review.review,
+          created_at: review.created_at,
+        }));
+        
+        return {
+          isbn: book.isbn,
+          author: book.author,
+          title: book.title,
+          reviews: reviewsArray,
+        };
+      })
+    );
+    
+    return booksWithReviews;
+  } catch (error) {
+    throw error;
+  }
 };
 
 Book.getReviews = async function (isbn) {
@@ -202,19 +272,21 @@ Book.getReviews = async function (isbn) {
     
     // Get reviews
     const reviews = await sequelize.query(
-      'SELECT username, review FROM reviews WHERE book_id = :book_id',
+      'SELECT id, username, review, created_at FROM reviews WHERE book_id = :book_id ORDER BY created_at DESC',
       {
         replacements: { book_id: book.id },
         type: sequelize.QueryTypes.SELECT,
       }
     );
     
-    const reviewsObj = {};
-    reviews.forEach(review => {
-      reviewsObj[review.username] = review.review;
-    });
+    const reviewsArray = reviews.map(review => ({
+      id: review.id,
+      username: review.username,
+      review: review.review,
+      created_at: review.created_at,
+    }));
     
-    return reviewsObj;
+    return reviewsArray;
   } catch (error) {
     if (error.message === 'Book not found') {
       throw error;
@@ -255,12 +327,10 @@ Book.addReview = async function (isbn, username, review) {
     
     const userId = user ? user.id : null;
     
-    // Upsert the review
+    // Insert new review (users can add multiple reviews per book)
     await sequelize.query(
       `INSERT INTO reviews (book_id, user_id, username, review, created_at, updated_at)
-       VALUES (:book_id, :user_id, :username, :review, NOW(), NOW())
-       ON CONFLICT (book_id, username)
-       DO UPDATE SET review = :review, updated_at = NOW()`,
+       VALUES (:book_id, :user_id, :username, :review, NOW(), NOW())`,
       {
         replacements: {
           book_id: book.id,
@@ -281,7 +351,7 @@ Book.addReview = async function (isbn, username, review) {
   }
 };
 
-Book.deleteReview = async function (isbn, username) {
+Book.updateReview = async function (isbn, username, reviewId, newReview) {
   try {
     // Find book using raw Sequelize query
     const book = await sequelize.query(
@@ -297,24 +367,151 @@ Book.deleteReview = async function (isbn, username) {
       throw new Error('Book not found');
     }
     
-    // Delete the review
+    // Convert reviewId to integer to ensure proper type matching
+    const reviewIdInt = parseInt(reviewId, 10);
+    if (isNaN(reviewIdInt)) {
+      throw new Error('Invalid reviewId');
+    }
+    
+    // Update the specific review (must belong to the user)
     const [results] = await sequelize.query(
-      'DELETE FROM reviews WHERE book_id = :book_id AND username = :username',
+      `UPDATE reviews 
+       SET review = :new_review, updated_at = NOW() 
+       WHERE book_id = :book_id AND username = :username AND id = :review_id
+       RETURNING id, username, review, updated_at`,
       {
         replacements: {
           book_id: book.id,
           username: username,
+          review_id: reviewIdInt,
+          new_review: newReview,
         },
       }
     );
     
-    if (results.rowCount === 0) {
+    if (results.length === 0) {
       throw new Error('Review not found');
     }
     
-    return { message: 'Review deleted successfully' };
+    return { 
+      message: 'Review updated successfully',
+      review: results[0]
+    };
   } catch (error) {
     if (error.message === 'Book not found' || error.message === 'Review not found') {
+      throw error;
+    }
+    throw error;
+  }
+};
+
+Book.deleteReview = async function (isbn, username, reviewId = null) {
+  try {
+    // Find book using raw Sequelize query
+    const book = await sequelize.query(
+      'SELECT id FROM books WHERE isbn = :isbn',
+      {
+        replacements: { isbn },
+        type: sequelize.QueryTypes.SELECT,
+        plain: true,
+      }
+    );
+    
+    if (!book) {
+      throw new Error('Book not found');
+    }
+    
+    // Delete the review(s)
+    // If reviewId is provided, delete that specific review
+    // Otherwise, delete all reviews by that username for this book
+    let query, replacements;
+    
+    if (reviewId) {
+      // Convert reviewId to integer to ensure proper type matching
+      const reviewIdInt = parseInt(reviewId, 10);
+      if (isNaN(reviewIdInt)) {
+        throw new Error('Invalid reviewId');
+      }
+      
+      // First verify the review exists and belongs to the user
+      const existingReview = await sequelize.query(
+        'SELECT id FROM reviews WHERE book_id = :book_id AND username = :username AND id = :review_id',
+        {
+          replacements: {
+            book_id: book.id,
+            username: username,
+            review_id: reviewIdInt,
+          },
+          type: sequelize.QueryTypes.SELECT,
+          plain: true,
+        }
+      );
+      
+      if (!existingReview) {
+        throw new Error('Review not found');
+      }
+      
+      // Delete the specific review
+      const deleteResult = await sequelize.query(
+        'DELETE FROM reviews WHERE book_id = :book_id AND username = :username AND id = :review_id',
+        {
+          replacements: {
+            book_id: book.id,
+            username: username,
+            review_id: reviewIdInt,
+          },
+        }
+      );
+      
+      // Check if deletion was successful
+      // Sequelize returns [results, metadata] for DELETE queries
+      let rowCount = 0;
+      if (Array.isArray(deleteResult) && deleteResult.length >= 2) {
+        rowCount = deleteResult[1]?.rowCount || 0;
+      } else if (deleteResult?.rowCount !== undefined) {
+        rowCount = deleteResult.rowCount;
+      }
+      
+      if (rowCount === 0) {
+        throw new Error('Review not found or could not be deleted');
+      }
+      
+      return { 
+        message: 'Review deleted successfully',
+        deletedCount: rowCount 
+      };
+    } else {
+      // Delete all reviews by that username for this book
+      const deleteResult = await sequelize.query(
+        'DELETE FROM reviews WHERE book_id = :book_id AND username = :username',
+        {
+          replacements: {
+            book_id: book.id,
+            username: username,
+          },
+        }
+      );
+      
+      // Get rowCount from the result
+      // Sequelize returns [results, metadata] for DELETE queries
+      let rowCount = 0;
+      if (Array.isArray(deleteResult) && deleteResult.length >= 2) {
+        rowCount = deleteResult[1]?.rowCount || 0;
+      } else if (deleteResult?.rowCount !== undefined) {
+        rowCount = deleteResult.rowCount;
+      }
+      
+      if (rowCount === 0) {
+        throw new Error('Review not found');
+      }
+      
+      return { 
+        message: 'Review deleted successfully',
+        deletedCount: rowCount 
+      };
+    }
+  } catch (error) {
+    if (error.message === 'Book not found' || error.message === 'Review not found' || error.message === 'Invalid reviewId') {
       throw error;
     }
     throw error;

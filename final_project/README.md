@@ -19,40 +19,48 @@ A RESTful API for managing book reviews with JWT authentication, PostgreSQL data
 
 ```
 final_project/
-├── config/              # Configuration files
-│   ├── config.js        # App configuration
-│   ├── database.js      # PostgreSQL database connection
-│   ├── migrate.js       # Database migration script
-│   └── schema.sql       # Database schema
 ├── src/                  # Source code
-│   ├── controllers/     # Route controllers (business logic)
+│   ├── config/          # Configuration files
+│   │   ├── config.js     # App configuration
+│   │   ├── sequelize.js  # Sequelize database connection
+│   │   ├── migrate.js    # Database migration script
+│   │   ├── seed.js       # Database seeding script
+│   │   ├── clear-books.js # Clear database utility
+│   │   ├── clear-reviews.js # Clear reviews utility
+│   │   ├── remove-unique-constraint.js # Migration to remove unique constraint
+│   │   └── schema.sql    # Database schema
+│   ├── controllers/      # Route controllers (business logic)
 │   │   ├── authController.js
 │   │   ├── bookController.js
 │   │   └── reviewController.js
-│   ├── middleware/      # Custom middleware
-│   │   ├── auth.js      # Authentication middleware
+│   ├── middleware/       # Custom middleware
+│   │   ├── auth.js       # Authentication middleware
 │   │   ├── errorHandler.js  # Global error handler
-│   │   └── notFound.js  # 404 handler
-│   ├── models/          # Data models/services
-│   │   ├── User.js      # User model (currently in-memory)
-│   │   └── Book.js      # Book model (currently in-memory)
-│   ├── routes/          # Route definitions
+│   │   └── notFound.js   # 404 handler
+│   ├── models/           # Sequelize models
+│   │   ├── index.js      # Models initialization
+│   │   ├── User.js       # User model (PostgreSQL)
+│   │   ├── Book.js       # Book model (PostgreSQL)
+│   │   └── Review.js     # Review model (PostgreSQL)
+│   ├── routes/           # Route definitions
 │   │   ├── authRoutes.js
 │   │   ├── bookRoutes.js
 │   │   └── reviewRoutes.js
-│   ├── utils/           # Utility functions
-│   │   └── jwt.js       # JWT helpers
-│   └── validators/      # Input validation
+│   ├── utils/            # Utility functions
+│   │   └── jwt.js        # JWT helpers
+│   └── validators/       # Input validation
 │       ├── authValidator.js
 │       └── reviewValidator.js
-├── router/              # Legacy router files
-│   ├── auth_users.js    # Legacy auth (deprecated)
-│   ├── booksdb.js       # In-memory book database
-│   └── general.js       # Legacy routes (deprecated)
-├── index.js             # Server entry point
-├── package.json
-├── .env.example         # Environment variables template
-└── .gitignore           # Git ignore rules
+├── scripts/              # Utility scripts
+│   └── booksdb.js        # Sample books data for seeding (development only)
+├── docker-compose.yml    # Docker Compose configuration
+├── docker-compose.prod.yml # Production Docker Compose
+├── Dockerfile            # Docker image configuration
+├── .dockerignore         # Docker ignore rules
+├── index.js              # Server entry point
+├── package.json          # Dependencies and scripts
+├── .env.example          # Environment variables template
+└── .gitignore            # Git ignore rules
 ```
 
 ## 🛠️ Quick Start
@@ -275,15 +283,17 @@ When running with Docker Compose, these are pre-configured:
 
 | Script | Description |
 |--------|-------------|
-| `npm start` | Start server (production) |
-| `npm run dev` | Start with auto-reload (development) |
-| `npm run db:migrate` | Create database tables |
-| `npm run db:seed` | Seed sample books |
-| `npm run db:seed:force` | Clear and re-seed |
-| `npm run db:clear` | Clear all books |
-| `npm run docker:up` | Start Docker Compose |
-| `npm run docker:down` | Stop Docker Compose |
-| `npm run docker:logs` | View Docker logs |
+| `npm start` | Start server (production mode) |
+| `npm run dev` | Start with auto-reload (development mode) |
+| `npm run db:migrate` | Run database migrations (create tables) |
+| `npm run db:seed` | Seed sample books into database |
+| `npm run db:seed:force` | Clear all books and re-seed |
+| `npm run db:clear` | Clear all books from database |
+| `npm run db:clear:reviews` | Clear all reviews from database |
+| `npm run docker:up` | Start Docker Compose services |
+| `npm run docker:up:build` | Start Docker Compose with rebuild |
+| `npm run docker:down` | Stop Docker Compose services |
+| `npm run docker:logs` | View Docker Compose logs |
 
 ## 🏗️ Architecture
 
@@ -300,21 +310,15 @@ When running with Docker Compose, these are pre-configured:
 - Authentication in middleware
 - Configuration in config files
 
-## 🔄 Migration from Legacy Code
+## 🔄 API Versioning
 
-The old routes are still functional but deprecated:
-- Old: `/register` → New: `/api/customer/register`
-- Old: `/customer/login` → New: `/api/customer/login`
-- Old: `/books/` → New: `/api/books`
-- Old: `/isbn/:isbn` → New: `/api/isbn/:isbn`
+All API endpoints are prefixed with `/api`:
+- Authentication: `/api/customer/*`
+- Books: `/api/books`, `/api/isbn/:isbn`, `/api/author/:author`, `/api/title/:title`
+- Reviews: `/api/customer/auth/review/:isbn`
+- Health: `/health`
 
-## 📚 Additional Documentation
-
-- **[DOCKER_QUICKSTART.md](DOCKER_QUICKSTART.md)** - Quick Docker reference
-- **[DOCKER_GUIDE.md](DOCKER_GUIDE.md)** - Complete Docker guide with production deployment
-- **[SEEDING_GUIDE.md](SEEDING_GUIDE.md)** - How to add and manage seed data
-- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Production deployment guide
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Technical implementation details
+implementation details
 
 ## 🐛 Troubleshooting
 
@@ -360,28 +364,21 @@ docker-compose down -v
 docker-compose up --build
 ```
 
-## 🏗️ Project Structure
+## 🏗️ Architecture Details
 
-```
-final_project/
-├── config/
-│   ├── config.js           # App configuration
-│   ├── sequelize.js        # Database connection
-│   ├── migrate.js          # Database migrations
-│   ├── seed.js             # Database seeding
-│   └── clear-books.js      # Clear database
-├── src/
-│   ├── controllers/        # Business logic
-│   ├── middleware/         # Auth, error handling
-│   ├── models/             # Sequelize models
-│   ├── routes/             # API routes
-│   ├── utils/              # Helper functions
-│   └── validators/         # Input validation
-├── docker-compose.yml      # Docker services config
-├── Dockerfile              # Docker image config
-├── index.js                # Server entry point
-└── package.json            # Dependencies
-```
+### Database Layer
+- **PostgreSQL**: Production-ready relational database
+- **Sequelize ORM**: Object-Relational Mapping for type-safe queries
+- **Connection Pooling**: Efficient database connection management
+- **Migrations**: Version-controlled database schema changes
+- **Seeding**: Automated sample data population
+
+### Application Layer
+- **Express.js**: Fast, minimalist web framework
+- **MVC Pattern**: Clear separation of concerns
+- **Middleware Chain**: Request processing pipeline
+- **Error Handling**: Centralized error management
+- **Validation**: Input sanitization and validation
 
 ## 🔧 Tech Stack
 

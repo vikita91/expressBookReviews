@@ -5,8 +5,8 @@ const morgan = require('morgan');
 const session = require('express-session');
 const rateLimit = require('express-rate-limit');
 
-const config = require('./config/config');
-const { testConnection } = require('./config/sequelize');
+const config = require('./src/config/config');
+const { testConnection } = require('./src/config/sequelize');
 const errorHandler = require('./src/middleware/errorHandler');
 const notFound = require('./src/middleware/notFound');
 
