@@ -430,9 +430,5 @@ MIT
 
 ---
 
-**Happy Coding!** 🚀
-
-For questions or issues, check the documentation or review the code comments.
-
 
 

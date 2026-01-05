@@ -327,10 +327,37 @@ Book.addReview = async function (isbn, username, review) {
     
     const userId = user ? user.id : null;
     
-    // Insert new review (users can add multiple reviews per book)
-    await sequelize.query(
+    // Check if an identical review already exists (idempotent check)
+    const existingReview = await sequelize.query(
+      `SELECT id, username, review, created_at, updated_at 
+       FROM reviews 
+       WHERE book_id = :book_id AND username = :username AND review = :review 
+       LIMIT 1`,
+      {
+        replacements: {
+          book_id: book.id,
+          username: username,
+          review: review,
+        },
+        type: sequelize.QueryTypes.SELECT,
+        plain: true,
+      }
+    );
+    
+    // If identical review exists, return it (idempotent behavior)
+    if (existingReview) {
+      return { 
+        message: 'Review already exists',
+        review: existingReview,
+        isDuplicate: true
+      };
+    }
+    
+    // Insert new review (only if no identical review exists)
+    const [newReview] = await sequelize.query(
       `INSERT INTO reviews (book_id, user_id, username, review, created_at, updated_at)
-       VALUES (:book_id, :user_id, :username, :review, NOW(), NOW())`,
+       VALUES (:book_id, :user_id, :username, :review, NOW(), NOW())
+       RETURNING id, username, review, created_at, updated_at`,
       {
         replacements: {
           book_id: book.id,
@@ -338,10 +365,15 @@ Book.addReview = async function (isbn, username, review) {
           username: username,
           review: review,
         },
+        type: sequelize.QueryTypes.SELECT,
       }
     );
     
-    return { message: 'Review added successfully' };
+    return { 
+      message: 'Review added successfully',
+      review: newReview,
+      isDuplicate: false
+    };
   } catch (error) {
     if (error.message === 'Book not found') {
       throw error;
